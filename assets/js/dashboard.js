@@ -96,7 +96,12 @@ async function load() {
         }
     }
 
-    const s = d.status, k = [
+    const s = d.status;
+    const expLabel = d.month_label ? `Expenses (${esc(d.month_label)})` : 'Expenses This Month';
+    const expUrl = (typeof ROOT !== 'undefined' 
+        ? ROOT + 'modules/reports.php?r=expenses_monthly' + (d.month_from ? `&from=${encodeURIComponent(d.month_from)}&to=${encodeURIComponent(d.month_to)}` : '')
+        : '#');
+    const k = [
         ['truck', 'Total Vehicles', d.total, VEH],
         ['check-circle', 'Available', s.available || 0, VEH + '?status=available'],
         ['signpost-2', 'On Trip', s.on_trip || 0, VEH + '?status=on_trip'],
@@ -104,7 +109,7 @@ async function load() {
         ['person-badge', 'Drivers', d.drivers, (typeof ROOT !== 'undefined' ? ROOT + 'modules/m.php?m=drivers' : '#')],
         ['exclamation-octagon-fill text-danger', 'Due Soon (≤7 Days)', uCount, '#urgentAlertBox'],
         ['exclamation-triangle', 'Alerts (30d)', d.alerts.length, (typeof ROOT !== 'undefined' ? ROOT + 'modules/reports.php?r=doc_expiry' : '#alerts')],
-        ['currency-rupee', 'Expenses This Month', inr(d.month_expense), (typeof ROOT !== 'undefined' ? ROOT + 'modules/reports.php?r=expenses_monthly' : '#')]
+        ['currency-rupee', expLabel, inr(d.month_expense), expUrl]
     ];
     $('#kpis').innerHTML = k.map(x => `<div class="col-6 col-md-4 col-xl-3"><a class="cardx kpi" href="${x[3]}"><div class="ic"><i class="bi bi-${x[0]}"></i></div><div><b>${x[2]}</b><span>${x[1]}</span></div></a></div>`).join('');
     const dn = (o, m) => ({ type: 'doughnut', data: { labels: Object.keys(o).map(x => m[x] || x), datasets: [{ data: Object.values(o), backgroundColor: P }] }, options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });

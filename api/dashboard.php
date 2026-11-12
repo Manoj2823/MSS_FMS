@@ -33,7 +33,18 @@ $drivers = (int) $pdo->query('SELECT COUNT(*) FROM drivers WHERE deleted_at IS N
 $fp = array_merge($vp, [$from, $to . ' 23:59:59']);
 $fuel = $q("SELECT DATE_FORMAT(f.filled_at,'%Y-%m') m,SUM(f.litres) l,SUM(f.total_amount) a FROM fuel_entries f JOIN vehicles v ON v.id=f.vehicle_id WHERE $vw AND f.filled_at BETWEEN ? AND ? GROUP BY m ORDER BY m", $fp);
 $mnt = $q("SELECT DATE_FORMAT(m.service_date,'%Y-%m') m,SUM(m.total_cost) a FROM maintenance_records m JOIN vehicles v ON v.id=m.vehicle_id WHERE $vw AND m.service_date BETWEEN ? AND ? GROUP BY m", array_merge($vp, [$from, $to]));
-$ex = $q("SELECT DATE_FORMAT(e.expense_date,'%Y-%m') m,e.category c,SUM(e.amount) a FROM expenses e LEFT JOIN vehicles v ON v.id=e.vehicle_id WHERE e.approval_status='approved' AND e.expense_date BETWEEN ? AND ? " . ($vp ? "AND $vw" : '') . " GROUP BY m,c", array_merge([$from, $to], $vp));
+$ex = $q("SELECT m, c, SUM(a) a FROM (
+    SELECT DATE_FORMAT(e.expense_date,'%Y-%m') m, e.category c, e.amount a 
+    FROM expenses e 
+    LEFT JOIN vehicles v ON v.id=e.vehicle_id 
+    WHERE e.approval_status='approved' AND e.category<>'loan_emi' AND e.expense_date BETWEEN ? AND ? " . ($vp ? "AND $vw" : '') . "
+    UNION ALL
+    SELECT DATE_FORMAT(p.paid_on,'%Y-%m') m, 'loan_emi' c, p.amount a 
+    FROM loan_payments p 
+    JOIN vehicle_loans l ON l.id=p.loan_id 
+    JOIN vehicles v ON v.id=l.vehicle_id 
+    WHERE p.paid_on BETWEEN ? AND ? " . ($vp ? "AND $vw" : '') . "
+) x GROUP BY m, c ORDER BY m, c", array_merge([$from, $to], $vp, [$from, $to], $vp));
 $tr = $q("SELECT t.status k,COUNT(*) n,COALESCE(SUM(t.distance_km),0) km FROM trips t JOIN vehicles v ON v.id=t.vehicle_id WHERE $vw AND t.planned_departure BETWEEN ? AND ? GROUP BY t.status", $fp);
 $al = [];
 $days = 30;
@@ -66,9 +77,42 @@ foreach ($al as $item) {
 }
 
 $licn = (int) $one("SELECT COUNT(*) n FROM drivers WHERE deleted_at IS NULL AND licence_expiry<=CURDATE()+INTERVAL 30 DAY")['n'];
-$mFuel = (float) $one("SELECT COALESCE(SUM(f.total_amount),0) s FROM fuel_entries f JOIN vehicles v ON v.id=f.vehicle_id WHERE $vw AND DATE_FORMAT(f.filled_at,'%Y-%m')=DATE_FORMAT(CURDATE(),'%Y-%m')", $vp)['s'];
-$mMnt = (float) $one("SELECT COALESCE(SUM(m.total_cost),0) s FROM maintenance_records m JOIN vehicles v ON v.id=m.vehicle_id WHERE $vw AND DATE_FORMAT(m.service_date,'%Y-%m')=DATE_FORMAT(CURDATE(),'%Y-%m')", $vp)['s'];
-$mOth = (float) $one("SELECT COALESCE(SUM(e.amount),0) s FROM expenses e LEFT JOIN vehicles v ON v.id=e.vehicle_id WHERE e.approval_status='approved' AND DATE_FORMAT(e.expense_date,'%Y-%m')=DATE_FORMAT(CURDATE(),'%Y-%m') " . ($vp ? "AND $vw" : ''), $vp)['s'];
+
+$curMonth = date('Y-m');
+$calcExpensesForMonth = function (string $m) use ($one, $vw, $vp) {
+    $f = (float) $one("SELECT COALESCE(SUM(f.total_amount),0) s FROM fuel_entries f JOIN vehicles v ON v.id=f.vehicle_id WHERE $vw AND DATE_FORMAT(f.filled_at,'%Y-%m')=?", array_merge($vp, [$m]))['s'];
+    $mn = (float) $one("SELECT COALESCE(SUM(m.total_cost),0) s FROM maintenance_records m JOIN vehicles v ON v.id=m.vehicle_id WHERE $vw AND DATE_FORMAT(m.service_date,'%Y-%m')=?", array_merge($vp, [$m]))['s'];
+    $o = (float) $one("SELECT COALESCE(SUM(e.amount),0) s FROM expenses e LEFT JOIN vehicles v ON v.id=e.vehicle_id WHERE e.approval_status='approved' AND e.category<>'loan_emi' AND DATE_FORMAT(e.expense_date,'%Y-%m')=? " . ($vp ? "AND $vw" : ''), array_merge([$m], $vp))['s'];
+    $l = (float) $one("SELECT COALESCE(SUM(p.amount),0) s FROM loan_payments p JOIN vehicle_loans l ON l.id=p.loan_id JOIN vehicles v ON v.id=l.vehicle_id WHERE $vw AND DATE_FORMAT(p.paid_on,'%Y-%m')=?", array_merge($vp, [$m]))['s'];
+    return $f + $mn + $o + $l;
+};
+
+$curMonthTotal = $calcExpensesForMonth($curMonth);
+$targetMonth = $curMonth;
+$monthExpense = $curMonthTotal;
+
+// Intelligent fallback to latest active month if current month has 0 logged entries
+if ($curMonthTotal <= 0) {
+    $latestRow = $one("SELECT m FROM (
+        SELECT DATE_FORMAT(filled_at,'%Y-%m') m FROM fuel_entries
+        UNION SELECT DATE_FORMAT(service_date,'%Y-%m') FROM maintenance_records
+        UNION SELECT DATE_FORMAT(expense_date,'%Y-%m') FROM expenses WHERE approval_status='approved'
+        UNION SELECT DATE_FORMAT(paid_on,'%Y-%m') FROM loan_payments
+    ) x ORDER BY m DESC LIMIT 1");
+    $latestMonth = $latestRow['m'] ?? $curMonth;
+    if ($latestMonth && $latestMonth !== $curMonth) {
+        $latestTotal = $calcExpensesForMonth($latestMonth);
+        if ($latestTotal > 0) {
+            $targetMonth = $latestMonth;
+            $monthExpense = $latestTotal;
+        }
+    }
+}
+
+$monthLabel = date('M Y', strtotime($targetMonth . '-01'));
+$monthFrom = date('Y-m-01', strtotime($targetMonth . '-01'));
+$monthTo = date('Y-m-t', strtotime($targetMonth . '-01'));
+
 $recent = $q("SELECT v.id,v.reg_no,v.vehicle_type,v.created_at FROM vehicles v WHERE $vw ORDER BY v.id DESC LIMIT 5", $vp);
 echo json_encode([
     'total' => $total,
@@ -79,7 +123,11 @@ echo json_encode([
     'alerts' => $al,
     'urgent_alerts' => $urgent_alerts,
     'urgent_count' => count($urgent_alerts),
-    'month_expense' => $mFuel + $mMnt + $mOth,
+    'month_expense' => $monthExpense,
+    'month_label' => $monthLabel,
+    'month_from' => $monthFrom,
+    'month_to' => $monthTo,
+    'target_month' => $targetMonth,
     'fuel' => $fuel,
     'maintenance' => $mnt,
     'expenses' => $ex,
