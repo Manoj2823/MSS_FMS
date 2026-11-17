@@ -19,17 +19,21 @@ $pdo = db();
 $need = fn($a) => $P === 'admin' ? 'admin.manage' : "$P.$a";
 require_login($need('view'));
 $label = fn($s) => ucwords(str_replace('_', ' ', (string) $s));
-function ref_opts(PDO $p, string $x): array
-{
-  [$t, $c] = explode(':', $x);
-  return $p->query("SELECT id,$c AS l FROM $t" . (in_array($t, SOFT, true) ? ' WHERE deleted_at IS NULL' : '') . " ORDER BY $c LIMIT 1000")->fetchAll();
+if (!function_exists('ref_opts')) {
+  function ref_opts(PDO $p, string $x): array
+  {
+    [$t, $c] = explode(':', $x);
+    return $p->query("SELECT id,$c AS l FROM $t" . (in_array($t, SOFT, true) ? ' WHERE deleted_at IS NULL' : '') . " ORDER BY $c LIMIT 1000")->fetchAll();
+  }
 }
-function norm($f, $v)
-{
-  $v = is_string($v) ? trim($v) : $v;
-  if ($v === '' || $v === null)
-    return null;
-  return $f['t'] === 'datetime' ? date('Y-m-d H:i:s', strtotime($v)) : $v;
+if (!function_exists('norm')) {
+  function norm($f, $v)
+  {
+    $v = is_string($v) ? trim($v) : $v;
+    if ($v === '' || $v === null)
+      return null;
+    return $f['t'] === 'datetime' ? date('Y-m-d H:i:s', strtotime($v)) : $v;
+  }
 }
 $err = [];
 $id = (int) ($_GET['id'] ?? 0);
@@ -43,6 +47,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($act === 'archive') {
     require_login($need('archive'));
     if ($soft) {
+      if ($T === 'tyre_fitments') {
+        $fitRow = $pdo->query("SELECT tyre_id, removed_on FROM tyre_fitments WHERE id=$id")->fetch();
+        if ($fitRow && empty($fitRow['removed_on'])) {
+          vset($pdo, "UPDATE tyres SET status='reusable' WHERE id=? AND status='fitted'", [(int) $fitRow['tyre_id']]);
+        }
+      }
       vset($pdo, "UPDATE $T SET deleted_at=NOW() WHERE id=? AND deleted_at IS NULL", [$id]);
       audit('archive', $T, $id);
       flash('Record archived (history retained).');
@@ -211,7 +221,24 @@ if ($mode === 'form') {
   }
   require_login($need('edit'));
   layout_top(($id ? 'Edit ' : 'New ') . $M['n'], $key, [$M['g'], $M['n'], $id ? 'Edit' : 'New']);
-  $in['_'] ??= null; ?>
+  $in['_'] ??= null;
+  if (!$id) {
+    if ($key === 'tyre_movements' && empty($in['moved_at'])) {
+      $in['moved_at'] = date('Y-m-d H:i');
+    }
+    if ($key === 'fitments' && empty($in['fitted_on'])) {
+      $in['fitted_on'] = date('Y-m-d');
+    }
+    if ($key === 'inspections' && empty($in['inspected_on'])) {
+      $in['inspected_on'] = date('Y-m-d');
+    }
+    if ($key === 'retreading' && empty($in['sent_on'])) {
+      $in['sent_on'] = date('Y-m-d');
+    }
+    if ($key === 'disposals' && empty($in['disposed_on'])) {
+      $in['disposed_on'] = date('Y-m-d');
+    }
+  } ?>
   <form method="post" enctype="multipart/form-data" class="cardx" novalidate><?= csrf_field() ?><input type="hidden"
       name="id" value="<?= $id ?>"><?php if (isset($err['_'])): ?>
       <div class="alert alert-danger"><?= e($err['_']) ?></div><?php endif; ?>

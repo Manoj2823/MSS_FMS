@@ -44,8 +44,8 @@ function report_defs(): array
             'f' => ['date', 'vehicle']
         ],
         'loans' => ['t' => 'Loan / EMI Payments', 'sql' => "SELECT v.reg_no,l.lender,l.account_ref,l.emi_amount,p.paid_on,p.amount,p.reference FROM loan_payments p JOIN vehicle_loans l ON l.id=p.loan_id JOIN vehicles v ON v.id=l.vehicle_id WHERE p.paid_on $dr AND " . sprintf($vf, 'l.vehicle_id') . " ORDER BY p.paid_on DESC", 'f' => ['date', 'vehicle']],
-        'tyre_inventory' => ['t' => 'Tyre Inventory & Lifecycle', 'sql' => "SELECT t.tyre_code,t.brand,t.size,t.status,v.reg_no fitted_to,f.position,f.fitted_on FROM tyres t LEFT JOIN tyre_fitments f ON f.tyre_id=t.id AND f.removed_on IS NULL LEFT JOIN vehicles v ON v.id=f.vehicle_id WHERE t.deleted_at IS NULL ORDER BY t.tyre_code", 'f' => []],
-        'tyre_movements' => ['t' => 'Tyre Movement Log', 'sql' => "SELECT m.moved_at,t.tyre_code,m.action,v.reg_no,m.position,m.note FROM tyre_movements m JOIN tyres t ON t.id=m.tyre_id LEFT JOIN vehicles v ON v.id=m.vehicle_id WHERE DATE(m.moved_at) $dr ORDER BY m.moved_at DESC", 'f' => ['date']],
+        'tyre_inventory' => ['t' => 'Tyre Inventory & Lifecycle', 'sql' => "SELECT t.tyre_code,t.brand,t.size,t.status,v.reg_no fitted_to,f.position,f.fitted_on FROM tyres t LEFT JOIN tyre_fitments f ON f.tyre_id=t.id AND f.removed_on IS NULL AND f.deleted_at IS NULL LEFT JOIN vehicles v ON v.id=f.vehicle_id WHERE t.deleted_at IS NULL ORDER BY t.tyre_code", 'f' => []],
+        'tyre_movements' => ['t' => 'Tyre Movement Log', 'sql' => "SELECT m.moved_at,t.tyre_code,m.action,v.reg_no,m.position,m.note FROM tyre_movements m JOIN tyres t ON t.id=m.tyre_id LEFT JOIN vehicles v ON v.id=m.vehicle_id WHERE DATE(m.moved_at) $dr AND m.deleted_at IS NULL ORDER BY m.moved_at DESC", 'f' => ['date']],
     ];
 }
 function run_report(PDO $p, string $k, array $in): array

@@ -70,7 +70,7 @@ layout_top($v['reg_no'], 'vehicles', ['Fleet', 'Vehicles', $v['reg_no']]); ?>
                 'Maintenance' => "SELECT service_date,service_type,workshop,total_cost,status FROM maintenance_records WHERE vehicle_id=? ORDER BY service_date DESC LIMIT 25",
                 'Documents' => "SELECT doc_type,doc_number,expiry_date FROM vehicle_documents WHERE vehicle_id=? AND deleted_at IS NULL ORDER BY expiry_date",
                 'Expenses' => "SELECT expense_date,category,amount,approval_status FROM expenses WHERE vehicle_id=? ORDER BY expense_date DESC LIMIT 25",
-                'Tyres' => "SELECT t.tyre_code,f.position,f.fitted_on,f.removed_on FROM tyre_fitments f JOIN tyres t ON t.id=f.tyre_id WHERE f.vehicle_id=? ORDER BY f.fitted_on DESC",
+                'Tyres' => "SELECT t.tyre_code,f.position,f.fitted_on,f.removed_on FROM tyre_fitments f JOIN tyres t ON t.id=f.tyre_id WHERE f.vehicle_id=? AND f.deleted_at IS NULL ORDER BY f.fitted_on DESC",
                 'Loan / EMI' => "SELECT lender,account_ref,emi_amount,end_date FROM vehicle_loans WHERE vehicle_id=? AND deleted_at IS NULL",
                 'Activity' => "SELECT created_at,action,details FROM audit_logs WHERE entity='vehicle' AND entity_id=? ORDER BY id DESC LIMIT 25"
             ];

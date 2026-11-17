@@ -83,11 +83,11 @@ function tyre_fit_errors(PDO $p, int $tyre, int $veh, string $pos, int $excl = 0
   $s = $q->fetchColumn();
   if (!in_array($s, ['in_stock', 'reusable'], true))
     $e[] = "Tyre status is '$s'; only in-stock or reusable tyres can be fitted.";
-  $q = $p->prepare('SELECT id FROM tyre_fitments WHERE tyre_id=? AND removed_on IS NULL AND id<>?');
+  $q = $p->prepare('SELECT id FROM tyre_fitments WHERE tyre_id=? AND removed_on IS NULL AND deleted_at IS NULL AND id<>?');
   $q->execute([$tyre, $excl]);
   if ($q->fetch())
     $e[] = 'Tyre already has an active fitment.';
-  $q = $p->prepare('SELECT id FROM tyre_fitments WHERE vehicle_id=? AND position=? AND removed_on IS NULL AND id<>?');
+  $q = $p->prepare('SELECT id FROM tyre_fitments WHERE vehicle_id=? AND position=? AND removed_on IS NULL AND deleted_at IS NULL AND id<>?');
   $q->execute([$veh, $pos, $excl]);
   if ($q->fetch())
     $e[] = 'That wheel position already has an active tyre.';
@@ -266,6 +266,32 @@ function a_fitments(array $d, int $id, array $old, PDO $p): void
   } elseif (empty($old['removed_on']) && $d['removed_on']) {
     vset($p, "UPDATE tyres SET status='reusable' WHERE id=?", [$d['tyre_id']]);
     vset($p, "INSERT INTO tyre_movements(tyre_id,action,vehicle_id,position,user_id,note) VALUES(?,?,?,?,?,?)", [$d['tyre_id'], 'remove', $d['vehicle_id'], $d['position'], $me, $d['removal_reason']]);
+  }
+}
+function v_tyre_movements(array &$d, int $id, array $old, PDO $p): array
+{
+  $d['user_id'] = $_SESSION['uid'] ?? 1;
+  if (empty($d['moved_at'])) {
+    $d['moved_at'] = date('Y-m-d H:i:s');
+  }
+  return [];
+}
+function a_tyre_movements(array $d, int $id, array $old, PDO $p): void
+{
+  if (!empty($d['action']) && !empty($d['tyre_id'])) {
+    $t = (int) $d['tyre_id'];
+    $act = $d['action'];
+    if ($act === 'fit') {
+      vset($p, "UPDATE tyres SET status='fitted' WHERE id=?", [$t]);
+    } elseif ($act === 'remove' || $act === 'receive_retread') {
+      vset($p, "UPDATE tyres SET status='reusable' WHERE id=?", [$t]);
+    } elseif ($act === 'send_retread') {
+      vset($p, "UPDATE tyres SET status='under_retreading' WHERE id=?", [$t]);
+    } elseif ($act === 'scrap') {
+      vset($p, "UPDATE tyres SET status='scrapped' WHERE id=?", [$t]);
+    } elseif ($act === 'sale') {
+      vset($p, "UPDATE tyres SET status='sold' WHERE id=?", [$t]);
+    }
   }
 }
 function v_disposals(array &$d, int $id, array $old, PDO $p): array

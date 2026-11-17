@@ -124,3 +124,4 @@ layout_top('Dashboard', 'dashboard', ['Dashboard']); ?>
 </div>
 <?php $js = '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script><script>window.API=' . json_encode(url('api/dashboard.php')) . ';window.ROOT=' . json_encode(url()) . ';window.VEH=' . json_encode(url('modules/vehicles/')) . ';window.TYPES=' . json_encode(TYPES) . ';window.STAT=' . json_encode(STATUSES) . '</script><script src="' . url('assets/js/dashboard.js') . '"></script>';
 layout_bottom($js);
+
