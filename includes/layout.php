@@ -25,6 +25,9 @@ function layout_top(string $title, string $active = 'dashboard', array $crumbs =
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width,initial-scale=1">
+        <meta name="robots" content="noindex, nofollow">
+        <meta name="author" content="CRB">
+        <meta name="description" content="Authorized Fleet Operations & Management System developed by CRB for MSS Transport.">
         <title><?= e($title) ?> · MSS Fleet Intelligence</title>
         <link href="<?= url('assets/vendor/bootstrap/css/bootstrap.min.css') ?>" rel="stylesheet">
         <link href="<?= url('assets/vendor/bootstrap-icons/bootstrap-icons.min.css') ?>" rel="stylesheet">

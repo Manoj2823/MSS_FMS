@@ -30,6 +30,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="author" content="CRB">
+  <meta name="description" content="Authorized Fleet Operations & Management System developed by CRB for MSS Transport.">
   <title>Sign in · MSS Fleet Intelligence</title>
   <link href="<?= url('assets/vendor/bootstrap/css/bootstrap.min.css') ?>" rel="stylesheet">
   <link href="<?= url('assets/vendor/inter/inter.css') ?>" rel="stylesheet">
@@ -55,6 +58,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
       <div class="text-center">
         <small class="text-secondary">Don't have an account? <a href="<?= url('signup.php') ?>" class="text-decoration-none fw-semibold">Create account</a></small>
+      </div>
+      <div class="text-center mt-3 pt-2 border-top">
+        <small class="text-secondary" style="font-size:0.75rem;">Authorized Fleet Portal · Developed &amp; Managed by CRB for MSS Transport</small>
       </div>
     </form>
   </div>
