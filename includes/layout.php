@@ -26,9 +26,9 @@ function layout_top(string $title, string $active = 'dashboard', array $crumbs =
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width,initial-scale=1">
         <title><?= e($title) ?> · MSS Fleet Intelligence</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <link href="<?= url('assets/vendor/bootstrap/css/bootstrap.min.css') ?>" rel="stylesheet">
+        <link href="<?= url('assets/vendor/bootstrap-icons/bootstrap-icons.min.css') ?>" rel="stylesheet">
+        <link href="<?= url('assets/vendor/inter/inter.css') ?>" rel="stylesheet">
         <link href="<?= url('assets/css/app.css') ?>" rel="stylesheet">
     </head>
 
@@ -157,7 +157,7 @@ function layout_bottom(string $extra = ''): void
             </main>
             <footer class="foot">© <?= date('Y') ?> MSS Transport / Mettur Super Service</footer>
         </div>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="<?= url('assets/vendor/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
         <script src="<?= url('assets/js/app.js') ?>"></script><?= $extra ?>
     </body>
 
