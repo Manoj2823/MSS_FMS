@@ -16,7 +16,7 @@ if (session_status() === PHP_SESSION_NONE) {
 $root = str_replace('\\', '/', realpath(dirname(__DIR__)));
 $doc = str_replace('\\', '/', realpath($_SERVER['DOCUMENT_ROOT'] ?? ''));
 if (!defined('BASE')) {
-  define('BASE', rtrim(str_replace($doc, '', $root), '/'));   // works in /mss-fleet-management/ or domain root
+  define('BASE', rtrim(str_ireplace($doc, '', $root), '/'));   // works in /mss-fleet-management/ or domain root
 }
 function url(string $p = ''): string
 {
